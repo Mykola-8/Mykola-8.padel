@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Padel Scoreboard Pro - Mobile Ready</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --accent-color: #f1c40f;
+            --text-color: #ffffff;
+            --gray-text: #888;
+        }
+
+        body {
+            background-color: #222;
+            margin: 0; padding: 0;
+            font-family: 'Arial Black', sans-serif;
+            overflow: hidden;
+            height: 100vh; width: 100vw;
+            touch-action: none; /* Запобігає випадковому масштабуванню при натисканні */
+        }
+
+        /* ТАБЛО */
+        #scoreboard {
+            position: absolute;
+            top: 20px; left: 10px;
+            width: 95vw; /* Для мобілок майже на весь екран */
+            max-width: 850px;
+            background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 12px;
+            border-left: 5px solid var(--accent-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            cursor: move;
+            z-index: 10;
+        }
+
+        .header-row {
+            display: grid;
+            grid-template-columns: 20px 50px 1fr 50px 50px 50px 80px;
+            font-size: 10px;
+            color: #555;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .team-row {
+            display: grid;
+            grid-template-columns: 20px 50px 1fr 50px 50px 50px 80px;
+            align-items: center;
+            gap: 5px;
+            margin: 8px 0;
+        }
+
+        /* Адаптація під мобільні (вертикальний вигляд) */
+        @media screen and (max-width: 600px) {
+            #scoreboard {
+                width: 96vw;
+                left: 2vw;
+            }
+            .header-row {
+                grid-template-columns: 15px 40px 1fr 35px 35px 35px 60px;
+                font-size: 8px;
+            }
+            .team-row {
+                grid-template-columns: 15px 40px 1fr 35px 35px 35px 60px;
+                gap: 3px;
+            }
+            .name-area { font-size: 1.1em !important; }
+            .set-box { height: 40px !important; font-size: 1.5em !important; }
+            .val-box.points { height: 50px !important; font-size: 1.8em !important; }
+            .player-photo { width: 40px !important; height: 40px !important; }
+        }
+
+        .set-box {
+            background: #222;
+            height: 60px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.2em; font-weight: 900;
+            border-radius: 4px; color: #444;
+        }
+
+        .set-box.active { color: #fff; background: #333; }
+        .set-box.won { color: var(--accent-color); }
+
+        .val-box.points {
+            background: var(--accent-color);
+            color: #000;
+            height: 70px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.8em; border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .name-area {
+            font-size: 1.6em;
+            padding-left: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-transform: uppercase;
+        }
+
+        .player-photo {
+            width: 50px; height: 50px;
+            background: #333; border-radius: 6px;
+            background-size: cover; background-position: center;
+        }
+
+        /* ЛОГОТИПИ */
+        .brand-logo {
+            position: absolute;
+            width: 70px; height: 70px;
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.2);
+            border-radius: 8px;
+            cursor: move;
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.2); font-size: 10px;
+            z-index: 5;
+        }
+
+        /* МЕНЮ */
+        #settings-panel { position: fixed; bottom: 15px; right: 15px; z-index: 1000; }
+        .modal {
+            display: none; position: fixed;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90vw; max-width: 350px;
+            background: white; color: #333;
+            padding: 15px; border-radius: 15px;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            max-height: 80vh; overflow-y: auto;
+        }
+        .btn-main { background: #3498db; color: white; border-radius: 50px; padding: 12px 25px; border: none; font-weight: bold; font-size: 14px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4); }
+        .modal input, .modal button { width: 100%; margin: 5px 0; padding: 10px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <div id="scoreboard">
+        <div class="header-row">
+            <div></div><div></div><div>MATCH</div><div>S1</div><div>S2</div><div>S3</div><div>SCORE</div>
+        </div>
+        
+        <div class="team-row">
+            <div id="s1" style="color:var(--accent-color);">●</div>
+            <div class="player-photo" id="img1"></div>
+            <div class="name-area" id="n1">T1</div>
+            <div class="set-box" id="s1_set1">-</div>
+            <div class="set-box" id="s1_set2">-</div>
+            <div class="set-box" id="s1_set3">-</div>
+            <div class="val-box points" onclick="addPoint(1)" id="pts1">0</div>
+        </div>
+
+        <div class="team-row">
+            <div id="s2" style="color:transparent;">●</div>
+            <div class="player-photo" id="img2"></div>
+            <div class="name-area" id="n2">T2</div>
+            <div class="set-box" id="s2_set1">-</div>
+            <div class="set-box" id="s2_set2">-</div>
+            <div class="set-box" id="s2_set3">-</div>
+            <div class="val-box points" onclick="addPoint(2)" id="pts2">0</div>
+        </div>
+    </div>
+
+    <div class="brand-logo" style="top: 250px; left: 10px;" id="logo1">L1</div>
+    <div class="brand-logo" style="top: 250px; left: 90px;" id="logo2">L2</div>
+    <div class="brand-logo" style="top: 250px; left: 170px;" id="logo3">L3</div>
+
+    <div id="settings-panel">
+        <button class="btn-main" onclick="toggleModal()">⚙️ SETUP</button>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <h3>Broadcast Setup</h3>
+        <button onclick="toggleMode()" id="mode-btn" style="background:#e67e22; color:white;">MODE: TENNIS</button>
+        <input type="text" id="in-n1" placeholder="Team 1 Name">
+        <input type="text" id="in-n2" placeholder="Team 2 Name">
+        <input type="color" id="in-bg" value="#1a1a1a">
+        <p style="font-size:10px;">Media Upload:</p>
+        <input type="file" id="f-p1" accept="image/*">
+        <input type="file" id="f-p2" accept="image/*">
+        <input type="file" id="f-l1" accept="image/*">
+        <button style="background:#27ae60; color:white;" onclick="saveToStorage()">SAVE CONFIG</button>
+        <button style="background:#e74c3c; color:white;" onclick="resetMatch()">RESET SCORE</button>
+        <button onclick="toggleModal()" style="background:#ccc;">CLOSE</button>
+    </div>
+
+    <script>
+        let state = {
+            p1: { pts: 0, gms: 0, sts: 0, hist: [] },
+            p2: { pts: 0, gms: 0, sts: 0, hist: [] },
+            mode: 'tennis', server: 1, isTiebreak: false
+        };
+
+        const tennisScores = ["0", "15", "30", "40", "Ad"];
+
+        function addPoint(player) {
+            const p = `p${player}`, o = player === 1 ? 'p2' : 'p1';
+            if (state.mode === 'americano') {
+                state[p].pts++;
+            } else if (state.isTiebreak) {
+                state[p].pts++;
+                if (state[p].pts >= 7 && (state[p].pts - state[o].pts >= 2)) {
+                    state.isTiebreak = false; winGame(p, o);
+                }
+            } else {
+                if (state[p].pts === 3 && state[o].pts === 3) state[p].pts = 4;
+                else if (state[p].pts === 4) winGame(p, o);
+                else if (state[o].pts === 4) state[o].pts = 3;
+                else if (state[p].pts === 3) winGame(p, o);
+                else state[p].pts++;
+            }
+            updateUI();
+        }
+
+        function winGame(p, o) {
+            state[p].pts = 0; state[o].pts = 0;
+            state[p].gms++;
+            state.server = state.server === 1 ? 2 : 1;
+            if (state[p].gms === 6 && state[o].gms === 6) {
+                state.isTiebreak = true;
+            } else if ((state[p].gms >= 6 && state[p].gms - state[o].gms >= 2) || state[p].gms === 7) {
+                state.p1.hist.push(state.p1.gms);
+                state.p2.hist.push(state.p2.gms);
+                state[p].sts++;
+                state.p1.gms = 0; state.p2.gms = 0;
+            }
+        }
+
+        function updateUI() {
+            const getScore = (p) => (state.mode === 'tennis' && !state.isTiebreak) ? tennisScores[state[p].pts] : state[p].pts;
+            document.getElementById('pts1').innerText = getScore('p1');
+            document.getElementById('pts2').innerText = getScore('p2');
+
+            for (let i = 1; i <= 3; i++) {
+                let s1b = document.getElementById(`s1_set${i}`);
+                let s2b = document.getElementById(`s2_set${i}`);
+                let curSet = state.p1.hist.length + 1;
+
+                if (i < curSet) {
+                    s1b.innerText = state.p1.hist[i-1];
+                    s2b.innerText = state.p2.hist[i-1];
+                    s1b.className = "set-box won"; s2b.className = "set-box won";
+                } else if (i === curSet) {
+                    s1b.innerText = state.p1.gms;
+                    s2b.innerText = state.p2.gms;
+                    s1b.className = "set-box active"; s2b.className = "set-box active";
+                } else {
+                    s1b.innerText = "-"; s2b.innerText = "-";
+                    s1b.className = "set-box"; s2b.className = "set-box";
+                }
+            }
+            document.getElementById('s1').style.color = state.server === 1 ? '#f1c40f' : 'transparent';
+            document.getElementById('s2').style.color = state.server === 2 ? '#f1c40f' : 'transparent';
+        }
+
+        // Функція для роботи з файлами
+        function setupFile(inputId, targetId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            input.addEventListener('change', function(e) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const el = document.getElementById(targetId);
+                    el.style.backgroundImage = `url(${ev.target.result})`;
+                    if(targetId.includes('logo')) { el.textContent = ''; el.style.border = 'none'; }
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            });
+        }
+
+        setupFile('f-p1', 'img1'); setupFile('f-p2', 'img2');
+        setupFile('f-l1', 'logo1');
+
+        function toggleMode() {
+            state.mode = (state.mode === 'tennis') ? 'americano' : 'tennis';
+            document.getElementById('mode-btn').innerText = "MODE: " + state.mode.toUpperCase();
+            resetMatch();
+        }
+
+        function resetMatch() {
+            state.p1 = {pts:0, gms:0, sts:0, hist:[]}; state.p2 = {pts:0, gms:0, sts:0, hist:[]};
+            state.isTiebreak = false; updateUI();
+        }
+
+        // DRAG AND DROP (з підтримкою Touch для телефонів)
+        function makeDraggable(el) {
+            let startX, startY, initialX, initialY;
+
+            function onStart(e) {
+                if (e.target.closest('.points') || e.target.closest('.modal')) return;
+                const touch = e.type === 'touchstart' ? e.touches[0] : e;
+                startX = touch.clientX;
+                startY = touch.clientY;
+                initialX = el.offsetLeft;
+                initialY = el.offsetTop;
+                document.addEventListener(e.type === 'touchstart' ? 'touchmove' : 'mousemove', onMove);
+                document.addEventListener(e.type === 'touchstart' ? 'touchend' : 'mouseup', onEnd);
+            }
+
+            function onMove(e) {
+                const touch = e.type === 'touchmove' ? e.touches[0] : e;
+                el.style.left = (initialX + (touch.clientX - startX)) + "px";
+                el.style.top = (initialY + (touch.clientY - startY)) + "px";
+            }
+
+            function onEnd(e) {
+                document.removeEventListener(e.type === 'touchend' ? 'touchmove' : 'mousemove', onMove);
+                document.removeEventListener(e.type === 'touchend' ? 'touchend' : 'mouseup', onEnd);
+            }
+
+            el.addEventListener('mousedown', onStart);
+            el.addEventListener('touchstart', onStart);
+        }
+
+        function saveToStorage() {
+            const config = {
+                n1: document.getElementById('in-n1').value, n2: document.getElementById('in-n2').value,
+                bg: document.getElementById('in-bg').value,
+                pos: { t: scoreboard.style.top, l: scoreboard.style.left }
+            };
+            localStorage.setItem('padelMobile_v1', JSON.stringify(config));
+            document.getElementById('n1').innerText = config.n1 || "T1";
+            document.getElementById('n2').innerText = config.n2 || "T2";
+            document.getElementById('scoreboard').style.background = config.bg;
+            toggleModal();
+        }
+
+        function toggleModal() { 
+            const m = document.getElementById('settings-modal'); 
+            m.style.display = (m.style.display === 'block') ? 'none' : 'block'; 
+        }
+
+        window.onload = () => {
+            updateUI();
+            makeDraggable(document.getElementById('scoreboard'));
+            document.querySelectorAll('.brand-logo').forEach(makeDraggable);
+        };
+    </script>
+</body>
+</html>
